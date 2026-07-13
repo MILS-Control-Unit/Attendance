@@ -256,7 +256,7 @@
   /* ---------- Monthly Grid (Absence/Excuse) ---------- */
   .month-field{ display:flex; flex-direction:column; gap:5px; }
   .month-field label{ font-size:11.5px; font-weight:700; color: var(--teal-dark); text-transform:uppercase; letter-spacing:.4px; }
-  .month-field input{
+  .month-field input, .month-field select{
     border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
     font-size: 13.5px; font-family: inherit; background:#fff; color: var(--ink);
   }
@@ -267,18 +267,14 @@
   th.day-head .dh-lock{ display:flex; align-items:center; justify-content:center; margin-bottom:3px; }
   th.day-head .dh-lock input[type="checkbox"]{ width:14px; height:14px; cursor:pointer; accent-color:#22C55E; }
   td.day-cell{
-    text-align:center; cursor:pointer; font-weight:700; padding:6px 3px !important;
-    min-width:34px; color: var(--ink-soft); user-select:none;
+    text-align:center; font-weight:700; padding:6px 3px !important;
+    min-width:34px; color: var(--ink-soft);
   }
-  td.day-cell:hover{ background: var(--sky); }
   td.day-cell.weekend{ background: var(--weekend); }
-  td.day-cell.locked{
-    background: repeating-linear-gradient(45deg, #F1F1EF, #F1F1EF 6px, #E7E5E0 6px, #E7E5E0 12px);
-    cursor:not-allowed; color:#B5B2A8;
+  td.day-cell input[type="checkbox"]{
+    width:16px; height:16px; cursor:pointer; accent-color: var(--teal); vertical-align:middle;
   }
-  td.day-cell.locked:hover{ background: repeating-linear-gradient(45deg, #F1F1EF, #F1F1EF 6px, #E7E5E0 6px, #E7E5E0 12px); }
-  #absence-tab td.day-cell.marked{ background: var(--coral-soft); color: var(--coral); }
-  #excuse-tab td.day-cell.marked{ background: var(--amber-soft); color:#92400E; }
+  td.day-cell input[type="checkbox"]:disabled{ cursor:not-allowed; opacity:.35; }
   .grid-legend{ display:flex; gap:16px; align-items:center; font-size:12px; color:var(--ink-soft); margin-bottom:12px; flex-wrap:wrap; }
   .grid-legend .swatch{ display:inline-block; width:14px; height:14px; border-radius:4px; vertical-align:middle; margin-inline-end:5px; }
 
@@ -372,16 +368,31 @@
       <div class="panel-head">
         <div>
           <h2>Absence Register</h2>
-          <p>Auto-linked from Teacher Database — click a day cell to mark/unmark an absence</p>
+          <p>Auto-linked from Teacher Database — tick the checkbox to mark/unmark an absence</p>
         </div>
         <div class="month-field">
           <label>Month</label>
           <input type="month" id="absenceMonthPicker">
         </div>
       </div>
+      <div class="toolbar" style="align-items:flex-end;">
+        <div class="month-field">
+          <label>Section</label>
+          <select id="absenceFilterSection"><option value="">All</option></select>
+        </div>
+        <div class="month-field">
+          <label>Stage</label>
+          <select id="absenceFilterStage"><option value="">All</option></select>
+        </div>
+        <div class="month-field">
+          <label>Grade</label>
+          <select id="absenceFilterGrade"><option value="">All</option></select>
+        </div>
+        <button class="ghost" id="btnClearAbsenceFilter">✕ Clear Filter</button>
+      </div>
       <div class="grid-legend">
-        <span><span class="swatch" style="background:var(--coral-soft); border:1px solid var(--coral);"></span>Absent</span>
         <span><span class="swatch" style="background:var(--weekend);"></span>Weekend</span>
+        <span>☐ Disabled checkbox = day closed (Inactive)</span>
       </div>
       <div id="absenceMessage"></div>
       <div class="table-wrap">
@@ -399,16 +410,31 @@
       <div class="panel-head">
         <div>
           <h2>Excuse Register</h2>
-          <p>Auto-linked from Teacher Database — click a day cell to mark/unmark an excused day</p>
+          <p>Auto-linked from Teacher Database — tick the checkbox to mark/unmark an excused day</p>
         </div>
         <div class="month-field">
           <label>Month</label>
           <input type="month" id="excuseMonthPicker">
         </div>
       </div>
+      <div class="toolbar" style="align-items:flex-end;">
+        <div class="month-field">
+          <label>Section</label>
+          <select id="excuseFilterSection"><option value="">All</option></select>
+        </div>
+        <div class="month-field">
+          <label>Stage</label>
+          <select id="excuseFilterStage"><option value="">All</option></select>
+        </div>
+        <div class="month-field">
+          <label>Grade</label>
+          <select id="excuseFilterGrade"><option value="">All</option></select>
+        </div>
+        <button class="ghost" id="btnClearExcuseFilter">✕ Clear Filter</button>
+      </div>
       <div class="grid-legend">
-        <span><span class="swatch" style="background:var(--amber-soft); border:1px solid var(--amber);"></span>Excused</span>
         <span><span class="swatch" style="background:var(--weekend);"></span>Weekend</span>
+        <span>☐ Disabled checkbox = day closed (Inactive)</span>
       </div>
       <div id="excuseMessage"></div>
       <div class="table-wrap">
@@ -435,10 +461,6 @@
           <input type="date" id="summaryDateFilter">
         </div>
         <button class="ghost" id="btnClearSummaryFilter" style="align-self:flex-end;">✕ Clear Filter</button>
-        <div class="month-field">
-          <label>Record Date (for checkboxes)</label>
-          <input type="date" id="summaryRecordDate">
-        </div>
       </div>
       <div class="stat-cards">
         <div class="stat-card">
@@ -471,8 +493,6 @@
               <th>Avg/Month</th>
               <th>Excuses</th>
               <th>Excuse %</th>
-              <th>Mark Absent</th>
-              <th>Mark Excused</th>
               <th>Dates</th>
             </tr>
           </thead>
@@ -885,12 +905,67 @@ function buildGridHead(theadEl, year, month){
 }
 
 async function toggleDayLock(dateKey){
-  if(dayLocksData[dateKey]) delete dayLocksData[dateKey];
-  else dayLocksData[dateKey] = true;
+  const isClosing = !!dayLocksData[dateKey]; // currently open -> about to close it
+  if(isClosing){
+    // check if any absence/excuse records exist for this day
+    const hasAbs = Object.values(absenceData).some(d => d && d[dateKey] !== undefined);
+    const hasExc = Object.values(excuseData).some(d => d && d[dateKey] !== undefined);
+    if(hasAbs || hasExc){
+      const ok = confirm('This day has recorded absences/excuses. Closing it will delete those records for this day. Continue?');
+      if(!ok) return;
+      Object.keys(absenceData).forEach(tid=>{
+        if(absenceData[tid] && absenceData[tid][dateKey] !== undefined){
+          delete absenceData[tid][dateKey];
+          if(!Object.keys(absenceData[tid]).length) delete absenceData[tid];
+        }
+      });
+      Object.keys(excuseData).forEach(tid=>{
+        if(excuseData[tid] && excuseData[tid][dateKey] !== undefined){
+          delete excuseData[tid][dateKey];
+          if(!Object.keys(excuseData[tid]).length) delete excuseData[tid];
+        }
+      });
+      await saveAbsences();
+      await saveExcuses();
+    }
+    delete dayLocksData[dateKey];
+  }else{
+    dayLocksData[dateKey] = true;
+  }
   await saveDayLocks();
   renderAbsenceGrid();
   renderExcuseGrid();
   renderSummary();
+}
+
+/* ============= SECTION/STAGE/GRADE FILTERS (Absence & Excuse tabs) ============= */
+function uniqueTeacherValues(field){
+  return [...new Set(teachersData.list.map(t=>t[field]).map(v=>String(v||'').trim()).filter(v=>v))]
+    .sort((a,b)=>a.localeCompare(b, undefined, {numeric:true, sensitivity:'base'}));
+}
+
+function populateFilterSelect(selectEl, values){
+  if(!selectEl) return;
+  const current = selectEl.value;
+  selectEl.innerHTML = '<option value="">All</option>' + values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if(values.includes(current)) selectEl.value = current;
+}
+
+function populateTabFilters(prefix){
+  populateFilterSelect(document.getElementById(`${prefix}FilterSection`), uniqueTeacherValues('section'));
+  populateFilterSelect(document.getElementById(`${prefix}FilterStage`), uniqueTeacherValues('stage'));
+  populateFilterSelect(document.getElementById(`${prefix}FilterGrade`), uniqueTeacherValues('grade'));
+}
+
+function filteredTeachers(prefix){
+  const sec = document.getElementById(`${prefix}FilterSection`)?.value || '';
+  const stage = document.getElementById(`${prefix}FilterStage`)?.value || '';
+  const grade = document.getElementById(`${prefix}FilterGrade`)?.value || '';
+  return sortedTeachers().filter(t=>
+    (!sec || t.section === sec) &&
+    (!stage || t.stage === stage) &&
+    (!grade || t.grade === grade)
+  );
 }
 
 function renderAbsenceGrid(){
@@ -898,9 +973,10 @@ function renderAbsenceGrid(){
   buildGridHead(document.getElementById('absenceGridHead'), year, month);
   const nDays = daysInMonth(year, month);
   const body = document.getElementById('absenceGridBody');
-  const list = sortedTeachers();
+  populateTabFilters('absence');
+  const list = filteredTeachers('absence');
   if(!list.length){
-    body.innerHTML = `<tr class="empty-row"><td colspan="${4+nDays}">No teachers yet — add teachers first.</td></tr>`;
+    body.innerHTML = `<tr class="empty-row"><td colspan="${4+nDays}">${teachersData.list.length ? 'No teachers match the current filters.' : 'No teachers yet — add teachers first.'}</td></tr>`;
     return;
   }
   body.innerHTML = list.map(t=>{
@@ -911,9 +987,9 @@ function renderAbsenceGrid(){
       const note = marked ? (absenceData[t.id][dateKey] || '') : '';
       const wknd = isWeekend(year, month, d);
       const open = isDayOpen(dateKey);
-      const locked = !open && !marked;
-      const cellTitle = locked ? 'Entry closed — Admin must open this day' : note;
-      cells += `<td class="day-cell${marked?' marked':''}${wknd?' weekend':''}${locked?' locked':''}" title="${escapeHtml(cellTitle)}" onclick="toggleAbsence(${t.id},'${dateKey}')">${marked?'✕':''}</td>`;
+      const locked = !open;
+      const cellTitle = locked ? 'Entry closed — Admin must open this day' : (note || (marked ? '' : 'Mark absent'));
+      cells += `<td class="day-cell${wknd?' weekend':''}" title="${escapeHtml(cellTitle)}"><input type="checkbox" ${marked?'checked':''} ${locked?'disabled':''} onclick="toggleAbsence(${t.id},'${dateKey}')"></td>`;
     }
     return `<tr>
       <td>${escapeHtml(t.name)}</td>
@@ -930,9 +1006,10 @@ function renderExcuseGrid(){
   buildGridHead(document.getElementById('excuseGridHead'), year, month);
   const nDays = daysInMonth(year, month);
   const body = document.getElementById('excuseGridBody');
-  const list = sortedTeachers();
+  populateTabFilters('excuse');
+  const list = filteredTeachers('excuse');
   if(!list.length){
-    body.innerHTML = `<tr class="empty-row"><td colspan="${4+nDays}">No teachers yet — add teachers first.</td></tr>`;
+    body.innerHTML = `<tr class="empty-row"><td colspan="${4+nDays}">${teachersData.list.length ? 'No teachers match the current filters.' : 'No teachers yet — add teachers first.'}</td></tr>`;
     return;
   }
   body.innerHTML = list.map(t=>{
@@ -943,9 +1020,9 @@ function renderExcuseGrid(){
       const reason = marked ? (excuseData[t.id][dateKey] || '') : '';
       const wknd = isWeekend(year, month, d);
       const open = isDayOpen(dateKey);
-      const locked = !open && !marked;
-      const cellTitle = locked ? 'Entry closed — Admin must open this day' : reason;
-      cells += `<td class="day-cell${marked?' marked':''}${wknd?' weekend':''}${locked?' locked':''}" title="${escapeHtml(cellTitle)}" onclick="toggleExcuse(${t.id},'${dateKey}')">${marked?'E':''}</td>`;
+      const locked = !open;
+      const cellTitle = locked ? 'Entry closed — Admin must open this day' : (reason || (marked ? '' : 'Mark excused'));
+      cells += `<td class="day-cell${wknd?' weekend':''}" title="${escapeHtml(cellTitle)}"><input type="checkbox" ${marked?'checked':''} ${locked?'disabled':''} onclick="toggleExcuse(${t.id},'${dateKey}')"></td>`;
     }
     return `<tr>
       <td>${escapeHtml(t.name)}</td>
@@ -978,14 +1055,9 @@ function renderSummary(){
   const workDays = Object.keys(dayLocksData).filter(k=>dayLocksData[k] && withinCutoff(k)).length || 1;
   document.getElementById('statWorkingDays').textContent = workDays;
 
-  const recordDateEl = document.getElementById('summaryRecordDate');
-  if(!recordDateEl.value) recordDateEl.value = todayKey();
-  const recordDate = recordDateEl.value;
-  const recordDayOpen = isDayOpen(recordDate);
-
   const body = document.getElementById('summaryBody');
   if(!teachersData.list.length){
-    body.innerHTML = '<tr class="empty-row"><td colspan="12">No teachers to summarize.</td></tr>';
+    body.innerHTML = '<tr class="empty-row"><td colspan="10">No teachers to summarize.</td></tr>';
     return;
   }
   body.innerHTML = sortedTeachers().map(t=>{
@@ -994,9 +1066,6 @@ function renderSummary(){
     const absCount = absDates.length;
     const excCount = excDates.length;
     const attendRate = ((workDays - absCount) / workDays * 100).toFixed(1);
-    const isAbsentOnRecordDate = !!(absenceData[t.id] && absenceData[t.id][recordDate] !== undefined);
-    const isExcusedOnRecordDate = !!(excuseData[t.id] && excuseData[t.id][recordDate] !== undefined);
-    const disabledAttr = (!recordDayOpen) ? 'disabled title="Entry closed — Admin must open this day"' : '';
     return `<tr>
       <td>${t.id}</td>
       <td>${escapeHtml(t.name)}</td>
@@ -1007,8 +1076,6 @@ function renderSummary(){
       <td>${(absCount/12).toFixed(1)}</td>
       <td>${excCount}</td>
       <td>${(excCount/workDays*100).toFixed(1)}%</td>
-      <td style="text-align:center;"><input type="checkbox" ${isAbsentOnRecordDate?'checked':''} ${isAbsentOnRecordDate?'':disabledAttr} onclick="toggleAbsenceFromSummary(${t.id})" style="width:16px; height:16px; cursor:pointer;"></td>
-      <td style="text-align:center;"><input type="checkbox" ${isExcusedOnRecordDate?'checked':''} ${isExcusedOnRecordDate?'':disabledAttr} onclick="toggleExcuseFromSummary(${t.id})" style="width:16px; height:16px; cursor:pointer;"></td>
       <td><button class="ghost" style="padding:5px 10px; font-size:12px;" onclick="showTeacherDates(${t.id})">📅 View</button></td>
     </tr>`;
   }).join('');
@@ -1017,18 +1084,6 @@ function renderSummary(){
 function todayKey(){
   const now = new Date();
   return `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
-}
-
-async function toggleAbsenceFromSummary(tid){
-  const recordDate = document.getElementById('summaryRecordDate').value || todayKey();
-  await toggleAbsence(tid, recordDate);
-  renderSummary();
-}
-
-async function toggleExcuseFromSummary(tid){
-  const recordDate = document.getElementById('summaryRecordDate').value || todayKey();
-  await toggleExcuse(tid, recordDate);
-  renderSummary();
 }
 
 function showTeacherDates(tid){
@@ -1084,15 +1139,30 @@ async function toggleAbsence(tid, dateKey){
   const exists = absenceData[tid] && absenceData[tid][dateKey] !== undefined;
   if(!exists && !isDayOpen(dateKey)){
     alert('Entry is closed for this day until Admin marks it open (tick the checkbox above the day in the header).');
+    renderAbsenceGrid();
+    renderExcuseGrid();
+    renderSummary();
     return;
   }
   if(exists){
-    if(!confirm('Remove this absence mark?')) return;
+    if(!confirm('Remove this absence mark?')){
+      renderAbsenceGrid();
+      renderExcuseGrid();
+      renderSummary();
+      return;
+    }
     delete absenceData[tid][dateKey];
     if(!Object.keys(absenceData[tid]).length) delete absenceData[tid];
   }else{
+    const reason = prompt('Reason for this absence:', '');
+    if(reason === null){ // cancelled
+      renderAbsenceGrid();
+      renderExcuseGrid();
+      renderSummary();
+      return;
+    }
     if(!absenceData[tid]) absenceData[tid] = {};
-    absenceData[tid][dateKey] = '';
+    absenceData[tid][dateKey] = reason;
   }
   await saveAbsences();
   renderAbsenceGrid();
@@ -1104,15 +1174,28 @@ async function toggleExcuse(tid, dateKey){
   const exists = excuseData[tid] && excuseData[tid][dateKey] !== undefined;
   if(!exists && !isDayOpen(dateKey)){
     alert('Entry is closed for this day until Admin marks it open (tick the checkbox above the day in the header).');
+    renderExcuseGrid();
+    renderAbsenceGrid();
+    renderSummary();
     return;
   }
   if(exists){
-    if(!confirm('Remove this excuse mark?')) return;
+    if(!confirm('Remove this excuse mark?')){
+      renderExcuseGrid();
+      renderAbsenceGrid();
+      renderSummary();
+      return;
+    }
     delete excuseData[tid][dateKey];
     if(!Object.keys(excuseData[tid]).length) delete excuseData[tid];
   }else{
     const reason = prompt('Reason for this excuse:', '');
-    if(reason === null) return; // cancelled
+    if(reason === null){ // cancelled
+      renderExcuseGrid();
+      renderAbsenceGrid();
+      renderSummary();
+      return;
+    }
     if(!excuseData[tid]) excuseData[tid] = {};
     excuseData[tid][dateKey] = reason;
   }
@@ -1138,8 +1221,25 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
 document.getElementById('absenceMonthPicker').onchange = renderAbsenceGrid;
 document.getElementById('excuseMonthPicker').onchange = renderExcuseGrid;
+document.getElementById('absenceFilterSection').onchange = renderAbsenceGrid;
+document.getElementById('absenceFilterStage').onchange = renderAbsenceGrid;
+document.getElementById('absenceFilterGrade').onchange = renderAbsenceGrid;
+document.getElementById('btnClearAbsenceFilter').onclick = ()=>{
+  document.getElementById('absenceFilterSection').value = '';
+  document.getElementById('absenceFilterStage').value = '';
+  document.getElementById('absenceFilterGrade').value = '';
+  renderAbsenceGrid();
+};
+document.getElementById('excuseFilterSection').onchange = renderExcuseGrid;
+document.getElementById('excuseFilterStage').onchange = renderExcuseGrid;
+document.getElementById('excuseFilterGrade').onchange = renderExcuseGrid;
+document.getElementById('btnClearExcuseFilter').onclick = ()=>{
+  document.getElementById('excuseFilterSection').value = '';
+  document.getElementById('excuseFilterStage').value = '';
+  document.getElementById('excuseFilterGrade').value = '';
+  renderExcuseGrid();
+};
 document.getElementById('summaryDateFilter').onchange = renderSummary;
-document.getElementById('summaryRecordDate').onchange = renderSummary;
 document.getElementById('btnClearSummaryFilter').onclick = ()=>{
   document.getElementById('summaryDateFilter').value = '';
   renderSummary();
